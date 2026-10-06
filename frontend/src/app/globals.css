@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+:root {
+  --background: #DA231D;
+  --foreground: #ffffff;
+  --vermilion-red: #DA231D;
+  --gold-accent: #E5C158;
+  --font-brush: var(--font-kaushan), "Permanent Marker", cursive, sans-serif;
+  --font-serif: var(--font-cinzel), serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-vermilion: var(--vermilion-red);
+  --color-gold: var(--gold-accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-brush: var(--font-brush);
+  --font-serif: var(--font-serif);
+}
+
+html {
+  background-color: var(--vermilion-red);
+  color: var(--foreground);
+}
+
+/* Lenis smooth scrolling defaults */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
