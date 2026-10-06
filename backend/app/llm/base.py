@@ -56,6 +56,10 @@ class LLMClient(abc.ABC):
     def embed(self, texts: List[str]) -> List[List[float]]:
         """Return embeddings for *texts* using the local sentence-transformer."""
 
+    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        """Alias for batch embedding."""
+        return self.embed(texts)
+
     # ── Vision ───────────────────────────────────────────────────────────────
 
     @abc.abstractmethod

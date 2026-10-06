@@ -79,10 +79,28 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     from app.core.admin_router import router as admin_router
-    app.include_router(admin_router, prefix="/api/v1")
+    from app.modules.ingestion.router import router as ingest_router
+    from app.modules.knowledge.router import router as knowledge_router
+    from app.modules.tutor.router import router as tutor_router
+    from app.modules.learner.router import router as learner_router
+    from app.modules.assessment.router import router as assessment_router
+    from app.modules.evaluation.router import router as eval_router
+    from app.modules.revision.router import router as revision_router
+    from app.modules.scheduler.router import router as scheduler_router
+    from app.modules.language.router import router as language_router
+    from app.modules.audio.router import router as audio_router
 
-    # Placeholder routers that will be filled by later modules
-    # (M1 – M9 will each add their own routers here)
+    app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(ingest_router, prefix="/api/v1")
+    app.include_router(knowledge_router, prefix="/api/v1")
+    app.include_router(tutor_router, prefix="/api/v1")
+    app.include_router(learner_router, prefix="/api/v1")
+    app.include_router(assessment_router, prefix="/api/v1")
+    app.include_router(eval_router, prefix="/api/v1")
+    app.include_router(revision_router, prefix="/api/v1")
+    app.include_router(scheduler_router, prefix="/api/v1")
+    app.include_router(language_router, prefix="/api/v1")
+    app.include_router(audio_router, prefix="/api/v1")
 
     return app
 

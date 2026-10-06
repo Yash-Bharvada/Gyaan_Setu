@@ -22,7 +22,6 @@ class LocalStore(VectorStore):
 
     def __init__(self, persist_dir: str | None = None):
         import chromadb
-        from chromadb.config import Settings as ChromaSettings
 
         path = persist_dir or os.path.join(settings.DATA_DIR, "local_vectors")
         os.makedirs(path, exist_ok=True)
@@ -40,18 +39,27 @@ class LocalStore(VectorStore):
 
     def upsert(
         self,
-        ids: List[str],
-        vectors: List[List[float]],
-        metadata: List[Dict[str, Any]],
+        ids: Any,
+        vectors: Optional[List[List[float]]] = None,
+        metadata: Optional[List[Dict[str, Any]]] = None,
         namespace: str = "units",
     ) -> None:
         col = self._col(namespace)
-        # Chroma requires string metadata values
+        if isinstance(ids, list) and ids and isinstance(ids[0], dict):
+            # List of dict records [{"id": ..., "values": [...], "metadata": {...}}]
+            id_list = [r["id"] for r in ids]
+            vec_list = [r.get("values", r.get("vector", [])) for r in ids]
+            meta_list = [r.get("metadata", {}) for r in ids]
+        else:
+            id_list = ids
+            vec_list = vectors or []
+            meta_list = metadata or [{}] * len(id_list)
+
         safe_meta = [
             {k: str(v) if not isinstance(v, (str, int, float, bool)) else v for k, v in m.items()}
-            for m in metadata
+            for m in meta_list
         ]
-        col.upsert(ids=ids, embeddings=vectors, metadatas=safe_meta)
+        col.upsert(ids=id_list, embeddings=vec_list, metadatas=safe_meta)
 
     def query(
         self,
@@ -61,6 +69,9 @@ class LocalStore(VectorStore):
         namespace: str = "units",
     ) -> List[Dict[str, Any]]:
         col = self._col(namespace)
+        if col.count() == 0:
+            return []
+
         kwargs: Dict[str, Any] = {
             "query_embeddings": [vector],
             "n_results": min(top_k, max(1, col.count())),
@@ -68,9 +79,6 @@ class LocalStore(VectorStore):
         }
         if filter:
             kwargs["where"] = filter
-
-        if col.count() == 0:
-            return []
 
         result = col.query(**kwargs)
         ids_ = result.get("ids", [[]])[0]
@@ -90,8 +98,11 @@ class LocalStore(VectorStore):
 
     def ping(self) -> Dict[str, Any]:
         try:
-            # Heartbeat — list collections
             self._client.list_collections()
             return {"status": "ok", "backend": "local_chroma"}
         except Exception as exc:
             return {"status": "error", "detail": str(exc)}
+
+
+# Alias for backward compatibility
+LocalVectorStore = LocalStore

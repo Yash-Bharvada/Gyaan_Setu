@@ -26,6 +26,16 @@ def setup_test_db():
     Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
+def db_session(setup_test_db):
+    engine = create_engine(TEST_DB, connect_args={'check_same_thread': False})
+    TestSession = sessionmaker(bind=engine)
+    session = TestSession()
+    try:
+        yield session
+    finally:
+        session.close()
+
+@pytest.fixture
 def mock_llm():
     m = MockLLM()
     reset_llm(m)

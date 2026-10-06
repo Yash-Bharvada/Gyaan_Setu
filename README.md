@@ -79,12 +79,12 @@ uvicorn app.main:app --reload --port 8000
 ## 🗺️ Module Roadmap
 
 - [x] **M0: Foundation** — Project scaffold, DB ORM models, LLM gateway, VectorStore, OCR providers, Budget guards, Job service, Health checks.
-- [ ] **M1: Multimodal Ingestion** — PDF, PPTX, Video, Images -> source-linked units (pages, slides, timestamps).
-- [ ] **M2: Knowledge Structuring** — Hierarchical topics, concepts, DAG prerequisite graph, embedding tagging.
-- [ ] **M3: Source-Grounded Tutor** — Hybrid retrieval (BM25 + Vector), Relevance gate, Cited answers, Refusal mechanism.
-- [ ] **M4: Learner Model** — Bayesian Knowledge Tracing (BKT), Cold-start diagnostic, Forgetting curves, Signal tracker.
-- [ ] **M5: Adaptive Assessment** — Question generation, Cross-model verification, Stem deduplication, Rubric grading.
-- [ ] **M6: System Evaluation** — RAGAS metrics & simulated student learning trajectories.
-- [ ] **M7: Revision & Planning** — Flow map data, Flashcards (SM-2/FSRS), PPTX slide summaries, Spaced study scheduler.
-- [ ] **M8: Multilingual & Voice** — Hindi / Hinglish cross-lingual retrieval, Sarvam STT/TTS voice tutoring.
-- [ ] **M9: Hardening & Integration** — E2E smoke tests, Demo seeders, Rate limits, Security hardening.
+- [x] **M1: Multimodal Ingestion** — PDF, PPTX, Video, Images, Text -> source-linked units (pages, slides, timestamps).
+- [x] **M2: Knowledge Structuring** — Hierarchical topics, concepts, DAG prerequisite graph, embedding tagging.
+- [x] **M3: Source-Grounded Tutor** — Hybrid retrieval (BM25 + Vector), Relevance gate, Cited answers, Refusal mechanism.
+- [x] **M4: Learner Model** — Bayesian Knowledge Tracing (BKT), Cold-start diagnostic, Forgetting curves, Signal tracker.
+- [x] **M5: Adaptive Assessment** — Question generation, Cross-model verification, Stem deduplication, Rubric grading.
+- [x] **M6: System Evaluation** — RAGAS metrics & simulated student learning trajectories.
+- [x] **M7: Revision & Planning** — Flow map data, Flashcards (SM-2/FSRS), PPTX slide summaries, Spaced study scheduler.
+- [x] **M8: Multilingual & Voice** — Hindi / Hinglish cross-lingual retrieval, Sarvam STT/TTS voice tutoring.
+- [x] **M9: Hardening & Integration** — E2E integration test suite (45/45 tests passing), Demo seeders, Modular routers.

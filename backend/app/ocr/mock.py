@@ -13,6 +13,13 @@ class MockOCR(OCRProvider):
         digest = hashlib.md5(image_bytes).hexdigest()[:8]
         return f"[MOCK OCR TEXT for image hash={digest}]"
 
+    def extract_text(self, image_bytes: bytes) -> str:
+        return self.ocr_image(image_bytes)
+
+
+# Aliases for compatibility
+MockOCRProvider = MockOCR
+
 
 def get_ocr_factory(*, force_mock: bool = False) -> OCRProvider:
     """

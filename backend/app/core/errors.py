@@ -92,6 +92,11 @@ class DuplicateUploadError(StudyCompanionError):
     code = "duplicate_upload"
 
 
+# Aliases
+AppError = StudyCompanionError
+DuplicateResourceError = DuplicateUploadError
+
+
 # ── FastAPI handlers ─────────────────────────────────────────────────────────
 
 def register_error_handlers(app: FastAPI) -> None:
