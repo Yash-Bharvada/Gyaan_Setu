@@ -1,0 +1,65 @@
+﻿# StudyCompanion Backend - Pinned Requirements
+# Python 3.10+ required
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+sse-starlette==2.1.0
+
+# Pydantic / Settings
+pydantic==2.13.4
+pydantic-settings==2.3.4
+
+# Database
+sqlalchemy==2.0.30
+aiosqlite==0.20.0
+
+# LLM providers
+groq==1.5.0
+google-generativeai==0.7.2
+httpx==0.28.1
+
+# Local embeddings (CPU)
+sentence-transformers==5.2.2
+
+# Vector stores
+pinecone==10.0.0
+chromadb==0.4.24
+
+# LLM response cache
+diskcache==5.6.3
+
+# OCR
+pytesseract==0.3.10
+Pillow==10.3.0
+
+# Document parsing
+PyMuPDF==1.24.3
+python-pptx==0.6.23
+
+# Video / Audio
+faster-whisper==1.0.3
+opencv-python-headless==4.10.0.84
+
+# NLP utilities
+rank-bm25==0.2.2
+networkx==3.3
+
+# Evaluation
+ragas==0.1.21
+
+# Math / Science
+sympy==1.12
+numpy==1.26.4
+
+# Audio TTS fallbacks
+edge-tts==6.1.10
+gTTS==2.5.1
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.7
+
+# Dev
+python-dotenv==1.0.1
