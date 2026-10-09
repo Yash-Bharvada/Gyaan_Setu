@@ -244,6 +244,7 @@ class Question(Base):
     explanation = Column(Text, nullable=True)
     distractor_rationales = Column(Text, nullable=True)  # JSON
     topic_id = Column(Integer, ForeignKey("topics.id"), nullable=True, index=True)
+    topic = relationship("Topic")
     difficulty = Column(Integer, default=3)         # 1–5
     source_unit_ids = Column(Text, nullable=True)  # JSON list of unit ids
     verified = Column(Boolean, default=False)
@@ -371,6 +372,7 @@ class Flashcard(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     student = relationship("Student", back_populates="flashcards")
+    topic = relationship("Topic")
 
 
 # ── Study Schedules ───────────────────────────────────────────────────────────

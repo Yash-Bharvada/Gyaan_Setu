@@ -27,6 +27,21 @@ class SynthesizeRequest(BaseModel):
     text: str
     target_language_code: Optional[str] = "hi-IN"
     speaker_gender: Optional[str] = "female"
+    speaker: Optional[str] = None
+    pace: Optional[float] = 1.0
+
+
+class PodcastTurn(BaseModel):
+    speaker: str = "host1"
+    speaker_name: Optional[str] = "Host"
+    text: str
+
+
+class PodcastSynthesizeRequest(BaseModel):
+    dialogue: list[PodcastTurn]
+    language: Optional[str] = "en"
+    host1_voice: Optional[str] = "meera"
+    host2_voice: Optional[str] = "arvind"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -44,17 +59,42 @@ async def transcribe_audio(
 
 @router.post("/synthesize")
 def synthesize_speech(payload: SynthesizeRequest):
-    """Synthesize text into speech audio bytes."""
+    """Synthesize text into speech audio bytes using Sarvam AI (or local neural fallback)."""
     audio_bytes = TTSService.synthesize(
         text=payload.text,
         target_language_code=payload.target_language_code,
         speaker_gender=payload.speaker_gender,
+        speaker=payload.speaker,
+        pace=payload.pace,
     )
+    media_type = "audio/wav" if audio_bytes.startswith(b"RIFF") else "audio/mpeg"
+    filename = "speech.wav" if audio_bytes.startswith(b"RIFF") else "speech.mp3"
     return Response(
         content=audio_bytes,
-        media_type="audio/mpeg",
-        headers={"Content-Disposition": "inline; filename=speech.mp3"},
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename={filename}"},
     )
+
+
+@router.post("/synthesize-podcast")
+def synthesize_podcast(payload: PodcastSynthesizeRequest):
+    """Synthesize 2-host podcast conversation with multi-voice Sarvam AI audio merging."""
+    dialogue_dicts = [turn.model_dump() for turn in payload.dialogue]
+    audio_bytes = TTSService.synthesize_podcast(
+        dialogue=dialogue_dicts,
+        language=payload.language or "en",
+        host1_voice=payload.host1_voice or "priya",
+        host2_voice=payload.host2_voice or "kabir",
+    )
+    media_type = "audio/wav" if audio_bytes.startswith(b"RIFF") else "audio/mpeg"
+    filename = "podcast.wav" if audio_bytes.startswith(b"RIFF") else "podcast.mp3"
+    return Response(
+        content=audio_bytes,
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename={filename}"},
+    )
+
+
 
 
 @router.post("/voice-chat", response_model=Dict[str, Any])

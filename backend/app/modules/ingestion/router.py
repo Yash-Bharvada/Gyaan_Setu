@@ -46,6 +46,7 @@ class SourceOut(BaseModel):
     id: int
     title: str
     kind: str
+    file_path: Optional[str] = None
     file_size: int
     status: str
     page_count: Optional[int] = None
@@ -59,11 +60,49 @@ class RawTextInput(BaseModel):
     lang: Optional[str] = "en"
 
 
+class YouTubeIngestInput(BaseModel):
+    url: str
+    title: Optional[str] = None
+    async_mode: Optional[bool] = False
+    auto_build_knowledge: Optional[bool] = True
+
+
+def _run_background_youtube_ingest(
+    url: str,
+    title: Optional[str],
+    job_id: int,
+):
+    from app.core.db import SessionLocal
+    from app.llm.factory import get_llm
+    from app.vectorstore.local_store import LocalVectorStore
+
+    db = SessionLocal()
+    try:
+        JobService.start(db, job_id)
+        llm = get_llm()
+        vstore = LocalVectorStore()
+        source = IngestionService.process_youtube_or_video_url(
+            db=db,
+            url=url,
+            title=title,
+            llm_client=llm,
+            vector_store=vstore,
+            auto_build_knowledge=True,
+            job_id=job_id,
+        )
+        JobService.complete(db, job_id, result=f'{{"source_id": {source.id}}}')
+    except Exception as exc:
+        JobService.fail(db, job_id, error=str(exc))
+    finally:
+        db.close()
+
+
 def _run_background_ingest(
     file_path: str,
     title: str,
     job_id: int,
 ):
+
     from app.core.db import SessionLocal
     from app.llm.factory import get_llm
     from app.ocr.mock import MockOCRProvider
@@ -156,6 +195,62 @@ def ingest_raw_text(
         ocr_provider=ocr,
     )
     return {"status": "completed", "source_id": source.id, "title": source.title, "units_count": len(source.units)}
+
+
+@router.post("/youtube", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
+def ingest_youtube_video(
+    payload: YouTubeIngestInput,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm),
+    vstore: VectorStore = Depends(get_vector_store),
+):
+    """Ingest a YouTube video or video URL, extracting metadata and timestamped transcript units."""
+    if payload.async_mode:
+        job = JobService.create(db, kind="ingest", message=f"Ingesting YouTube video {payload.url}")
+        background_tasks.add_task(_run_background_youtube_ingest, payload.url, payload.title, job.id)
+        return {
+            "status": "accepted",
+            "job_id": job.id,
+            "message": "YouTube video ingestion started in background",
+        }
+    else:
+        source = IngestionService.process_youtube_or_video_url(
+            db=db,
+            url=payload.url,
+            title=payload.title,
+            llm_client=llm,
+            vector_store=vstore,
+            auto_build_knowledge=payload.auto_build_knowledge if payload.auto_build_knowledge is not None else True,
+        )
+        return {
+            "status": "completed",
+            "source_id": source.id,
+            "title": source.title,
+            "kind": source.kind.value,
+            "units_count": len(source.units),
+            "duration_secs": source.duration_secs,
+            "message": f"Successfully parsed video lecture with {len(source.units)} timestamped lecture segments.",
+        }
+
+
+@router.post("/video-url", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
+def ingest_video_url(
+    payload: YouTubeIngestInput,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm),
+    vstore: VectorStore = Depends(get_vector_store),
+):
+    """Alias for ingesting any YouTube video or external video lecture URL."""
+    return ingest_youtube_video(
+        payload=payload,
+        background_tasks=background_tasks,
+        db=db,
+        llm=llm,
+        vstore=vstore,
+    )
+
 
 
 @router.get("/sources", response_model=List[SourceOut])

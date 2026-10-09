@@ -68,21 +68,54 @@ def generate_flashcards(
 
 
 @router.get("/flashcards", response_model=List[Dict[str, Any]])
-def get_due_flashcards(student_id: int, db: Session = Depends(get_db)):
+def get_due_flashcards(
+    student_id: int,
+    limit: Optional[int] = 10,
+    topic_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm),
+):
     """Fetch all flashcards due for review for a student."""
-    now = datetime.utcnow()
-    cards = db.query(Flashcard).filter(
-        Flashcard.student_id == student_id,
-        Flashcard.next_review_at <= now,
-    ).all()
+    query = db.query(Flashcard).filter(Flashcard.student_id == student_id)
+    if topic_id:
+        query = query.filter(Flashcard.topic_id == topic_id)
 
-    if not cards:
-        cards = db.query(Flashcard).filter(Flashcard.student_id == student_id).limit(10).all()
+    cards = query.all()
+
+    target_limit = limit or 10
+    if len(cards) < target_limit:
+        # Auto-generate fresh flashcards from curriculum topics until limit is met
+        from app.models import Topic
+        if topic_id:
+            topics = db.query(Topic).filter(Topic.id == topic_id).all()
+        else:
+            topics = db.query(Topic).all()
+
+        for t in topics:
+            if len(cards) >= target_limit:
+                break
+            try:
+                FlashcardService.generate_flashcards(db, student_id, t.id, llm, count=3)
+                q = db.query(Flashcard).filter(Flashcard.student_id == student_id)
+                if topic_id:
+                    q = q.filter(Flashcard.topic_id == topic_id)
+                cards = q.all()
+            except Exception:
+                pass
+
+        # If a single narrow topic has fewer cards, top up with other curriculum flashcards
+        if len(cards) < target_limit and topic_id:
+            extra = db.query(Flashcard).filter(Flashcard.student_id == student_id, Flashcard.topic_id != topic_id).all()
+            cards.extend(extra[:target_limit - len(cards)])
+
+    if limit and limit > 0:
+        cards = cards[:limit]
 
     return [
         {
             "id": c.id,
             "topic_id": c.topic_id,
+            "topic_name": c.topic.name if c.topic else f"Topic #{c.topic_id}",
             "front": c.front,
             "back": c.back,
             "ease_factor": c.ease_factor,
@@ -124,8 +157,13 @@ def get_slide_summary(
 @router.get("/brief/{topic_id}", response_model=Dict[str, Any])
 def get_audio_brief(
     topic_id: int,
+    mode: Optional[str] = "summary",
+    language: Optional[str] = "en",
     db: Session = Depends(get_db),
     llm: LLMClient = Depends(get_llm),
 ):
-    """Generate 2-minute revision audio brief script for a topic."""
-    return AudioBriefGenerator.generate_brief(db, topic_id, llm)
+    """Generate 2-minute revision audio brief or multi-host podcast script for a topic."""
+    return AudioBriefGenerator.generate_brief(
+        db, topic_id, llm, mode=mode or "summary", language=language or "en"
+    )
+

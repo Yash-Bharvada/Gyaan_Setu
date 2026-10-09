@@ -1,14 +1,50 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import GyaanSetuScrollHero from "@/components/GyaanSetuScrollHero";
 import { DoubleGoldCard } from "@/components/ui/DoubleGoldCard";
 import { GreekKeyDivider } from "@/components/ui/GreekKeyDivider";
 import { useI18n } from "@/lib/i18n";
+import { apiClient, HealthStatus } from "@/lib/api";
 
 export default function Home() {
   const { t } = useI18n();
+  const [backendHealthy, setBackendHealthy] = useState<boolean>(true);
+  const [healthData, setHealthData] = useState<HealthStatus | null>(null);
+  const [sourcesCount, setSourcesCount] = useState<number>(0);
+  const [conceptsCount, setConceptsCount] = useState<number>(0);
+  const [masteryPct, setMasteryPct] = useState<number>(0);
+  const [showTelemetry, setShowTelemetry] = useState<boolean>(false);
+
+  useEffect(() => {
+    async function loadTelemetry() {
+      try {
+        const health = await apiClient.getHealth();
+        setHealthData(health);
+        setBackendHealthy(health.status === "ok");
+
+        const sources = await apiClient.getSources();
+        setSourcesCount(sources ? sources.length : 0);
+
+        const graph = await apiClient.getKnowledgeGraph();
+        setConceptsCount(graph && graph.nodes ? graph.nodes.length : 0);
+
+        const mastery = await apiClient.getStudentMastery(1);
+        if (mastery && mastery.length) {
+          const avg = Math.round(
+            (mastery.reduce((acc, m) => acc + (m.p_known ?? 0.5), 0) / mastery.length) * 100
+          );
+          setMasteryPct(avg);
+        } else {
+          setMasteryPct(0);
+        }
+      } catch (err) {
+        console.warn("Home telemetry load warning:", err);
+      }
+    }
+    loadTelemetry();
+  }, []);
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -80,6 +116,122 @@ export default function Home() {
             >
               <span>{t("btnAskTutor")}</span>
             </Link>
+          </div>
+
+          {/* LIVE BACKEND STATUS & LEARNING PULSE HUD */}
+          <div className="w-full pt-8 max-w-4xl mx-auto">
+            <div className="p-5 md:p-6 rounded-2xl bg-[#1A1210]/90 border-2 border-[#E2A63A]/60 shadow-2xl backdrop-blur-md space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2A63A]/20 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3">
+                    <span
+                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                        backendHealthy ? "bg-emerald-400" : "bg-amber-400"
+                      }`}
+                    />
+                    <span
+                      className={`relative inline-flex rounded-full h-3 w-3 ${
+                        backendHealthy ? "bg-emerald-500" : "bg-amber-500"
+                      }`}
+                    />
+                  </span>
+                  <span className="font-mono text-xs md:text-sm font-semibold tracking-wider text-[#F7EDCF]">
+                    {backendHealthy ? "FASTAPI BACKEND CONNECTED" : "CONNECTING TO FASTAPI BACKEND..."}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-[#E2A63A]/15 text-[#E2A63A] border border-[#E2A63A]/30">
+                    http://127.0.0.1:8000
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-mono text-[#F7EDCF]/70">
+                  <span className="hidden sm:inline">Learner:</span>
+                  <span className="px-2 py-0.5 rounded bg-[#2D211D] text-[#E2A63A] font-bold border border-[#E2A63A]/20">
+                    Alex Chen (ID #1)
+                  </span>
+                  <button
+                    onClick={() => setShowTelemetry(!showTelemetry)}
+                    className="ml-2 text-[11px] text-[#E2A63A] underline hover:text-[#F4C76D] cursor-pointer"
+                  >
+                    {showTelemetry ? "Hide Diagnostics" : "Diagnostics"}
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Real-Time Metrics Counters */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-left">
+                <Link
+                  href="/library"
+                  className="p-3 rounded-xl bg-[#2D211D]/80 border border-[#E2A63A]/20 hover:border-[#E2A63A] hover:bg-[#2D211D] transition-all group"
+                >
+                  <div className="text-[11px] uppercase tracking-wider text-[#E2A63A]/80 font-mono">
+                    Ingested Docs
+                  </div>
+                  <div className="text-2xl font-bold font-display text-[#F7EDCF] group-hover:text-[#E2A63A] transition-colors">
+                    {sourcesCount}
+                  </div>
+                  <div className="text-[11px] text-[#F7EDCF]/60 flex items-center justify-between mt-1">
+                    <span>Course Materials</span>
+                    <span>→</span>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/progress"
+                  className="p-3 rounded-xl bg-[#2D211D]/80 border border-[#E2A63A]/20 hover:border-[#E2A63A] hover:bg-[#2D211D] transition-all group"
+                >
+                  <div className="text-[11px] uppercase tracking-wider text-[#E2A63A]/80 font-mono">
+                    Curriculum DAG
+                  </div>
+                  <div className="text-2xl font-bold font-display text-[#F7EDCF] group-hover:text-[#E2A63A] transition-colors">
+                    {conceptsCount}
+                  </div>
+                  <div className="text-[11px] text-[#F7EDCF]/60 flex items-center justify-between mt-1">
+                    <span>Concepts Mapped</span>
+                    <span>→</span>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/practice"
+                  className="p-3 rounded-xl bg-[#2D211D]/80 border border-[#E2A63A]/20 hover:border-[#E2A63A] hover:bg-[#2D211D] transition-all group"
+                >
+                  <div className="text-[11px] uppercase tracking-wider text-[#E2A63A]/80 font-mono">
+                    BKT Mastery
+                  </div>
+                  <div className="text-2xl font-bold font-display text-[#E2A63A] group-hover:text-[#F4C76D] transition-colors">
+                    {masteryPct}%
+                  </div>
+                  <div className="text-[11px] text-[#F7EDCF]/60 flex items-center justify-between mt-1">
+                    <span>Adaptive State</span>
+                    <span>→</span>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/revise"
+                  className="p-3 rounded-xl bg-[#2D211D]/80 border border-[#E2A63A]/20 hover:border-[#E2A63A] hover:bg-[#2D211D] transition-all group"
+                >
+                  <div className="text-[11px] uppercase tracking-wider text-[#E2A63A]/80 font-mono">
+                    Flashcards
+                  </div>
+                  <div className="text-2xl font-bold font-display text-[#F7EDCF] group-hover:text-[#E2A63A] transition-colors">
+                    SM-2
+                  </div>
+                  <div className="text-[11px] text-[#F7EDCF]/60 flex items-center justify-between mt-1">
+                    <span>Spaced Review</span>
+                    <span>→</span>
+                  </div>
+                </Link>
+              </div>
+
+              {/* Collapsible Telemetry JSON */}
+              {showTelemetry && (
+                <div className="mt-3 p-3 rounded-lg bg-[#0F0A08] border border-[#E2A63A]/30 text-left font-mono text-xs text-[#E2A63A]/90 overflow-x-auto">
+                  <div className="text-[10px] text-[#F7EDCF]/50 mb-1">LIVE SYSTEM HEALTH PAYLOAD (/api/v1/health):</div>
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(healthData, null, 2)}</pre>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

@@ -24,19 +24,20 @@ Target Topic: {topic_name}
 Question Type: {question_type}
 Difficulty (1=easy, 3=medium, 5=hard): {difficulty}
 
-Generate 2 distinct questions. Return a valid JSON object matching this schema:
+Generate {count} distinct, high-yield questions directly testing understanding of {topic_name}.
+Return a valid JSON object matching this schema exactly with NO comments:
 {{
   "questions": [
     {{
       "type": "{question_type}",
-      "stem": "Clear, unambiguous question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],  // only for mcq
-      "answer_key": "Exact correct answer string or correct option text",
-      "explanation": "Detailed explanation citing the concept",
+      "stem": "Clear, unambiguous academic question text",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "answer_key": "Exact correct answer string from the options list",
+      "explanation": "Detailed step-by-step academic explanation citing the concept and source facts",
       "distractor_rationales": {{
-        "Option A": "Why this option is incorrect",
-        "Option C": "Why this option is incorrect",
-        "Option D": "Why this option is incorrect"
+        "Option A": "Why this distractor is incorrect based on the material",
+        "Option C": "Why this distractor is incorrect based on the material",
+        "Option D": "Why this distractor is incorrect based on the material"
       }},
       "difficulty": {difficulty}
     }}
@@ -53,6 +54,7 @@ class QuestionGenerator:
         llm: LLMClient,
         question_type: QuestionType = QuestionType.mcq,
         difficulty: int = 3,
+        count: int = 2,
     ) -> List[Dict[str, Any]]:
         """Generate assessment questions grounded in content units."""
         context_str = "\n\n".join([f"[Unit {u.id}]: {u.text[:400]}" for u in units[:5]])
@@ -64,6 +66,7 @@ class QuestionGenerator:
             topic_name=topic.name,
             question_type=question_type.value,
             difficulty=difficulty,
+            count=count,
         )
 
         try:
@@ -75,24 +78,32 @@ class QuestionGenerator:
         except Exception as exc:
             logger.warning("LLM question generator fallback: %s", exc)
 
-        # Fallback question template
+        # Grounded fallback question from unit text
+        summary_text = topic.summary or f"The fundamental principles and operational mechanisms of {topic.name}."
+        first_unit_text = ""
+        for u in units:
+            if u.text and len(u.text.strip()) > 30:
+                first_unit_text = u.text.strip()
+                break
+
         if question_type == QuestionType.mcq:
+            correct_ans = first_unit_text[:140] if first_unit_text else summary_text
             return [
                 {
                     "type": "mcq",
-                    "stem": f"Which of the following is the primary principle of {topic.name}?",
+                    "stem": f"In {topic.name}, which statement is directly supported by the study material?",
                     "options": [
-                        f"Fundamental mechanism of {topic.name}",
-                        "An unrelated physical phenomenon",
-                        "Arbitrary static property",
-                        "Inverse non-linear assumption",
+                        correct_ans,
+                        f"It assumes that all features are perfectly independent without any correlation.",
+                        f"It eliminates the need for any mathematical or computational evaluation.",
+                        f"It operates exclusively on static non-differentiable step constants.",
                     ],
-                    "answer_key": f"Fundamental mechanism of {topic.name}",
-                    "explanation": f"The core foundation of {topic.name} establishes this primary mechanism.",
+                    "answer_key": correct_ans,
+                    "explanation": f"Grounded in curriculum context for {topic.name}.",
                     "distractor_rationales": {
-                        "An unrelated physical phenomenon": "This refers to an entirely separate domain.",
-                        "Arbitrary static property": "Does not explain the mechanism.",
-                        "Inverse non-linear assumption": "Factually incorrect description.",
+                        f"It assumes that all features are perfectly independent without any correlation.": "Unsupported assumption.",
+                        f"It eliminates the need for any mathematical or computational evaluation.": "Contradicts curriculum methodology.",
+                        f"It operates exclusively on static non-differentiable step constants.": "Factually incorrect constraint.",
                     },
                     "difficulty": difficulty,
                 }
@@ -101,9 +112,9 @@ class QuestionGenerator:
             return [
                 {
                     "type": question_type.value,
-                    "stem": f"Explain the key concept and mechanism of {topic.name}.",
-                    "answer_key": f"{topic.name} is characterized by {topic.summary or 'its core principle'}.",
-                    "explanation": f"Grounded in unit materials for {topic.name}.",
+                    "stem": f"Based on the curriculum for {topic.name}, explain how its core methodology functions.",
+                    "answer_key": first_unit_text[:200] if first_unit_text else summary_text,
+                    "explanation": f"Grounded in study guide units for {topic.name}.",
                     "difficulty": difficulty,
                 }
             ]

@@ -75,26 +75,29 @@ class OllamaClient(LLMClient):
     def generate_json(
         self,
         prompt: str,
-        schema: Type[BaseModel],
+        schema: Type[BaseModel] | None = None,
         system: str | None = None,
         role: Literal["generator", "verifier"] = "generator",
         temperature: float = 0.2,
         max_tokens: int = 4096,
         repair_retry: int = 1,
         bypass_cache: bool = False,
-    ) -> BaseModel:
-        schema_str = json.dumps(schema.model_json_schema(), indent=2)
-        sys_msg = (system or "") + f"\nRespond ONLY with valid JSON:\n{schema_str}"
+    ) -> Any:
+        if schema is not None:
+            schema_str = json.dumps(schema.model_json_schema(), indent=2)
+            sys_msg = (system or "") + f"\nRespond ONLY with valid JSON:\n{schema_str}"
+        else:
+            sys_msg = (system or "") + "\nRespond ONLY with valid JSON."
         raw = self.generate(prompt, sys_msg, role, temperature, max_tokens)
         raw = raw.strip().lstrip("```json").lstrip("```").rstrip("```")
         try:
-            return schema.model_validate_json(raw)
+            return schema.model_validate_json(raw) if schema is not None else json.loads(raw)
         except Exception as exc:
             if repair_retry <= 0:
                 raise LLMError(f"Ollama JSON parse failed: {exc}") from exc
             raw2 = self.generate(f"Fix JSON:\n{raw}\nError: {exc}", sys_msg)
             try:
-                return schema.model_validate_json(raw2.strip())
+                return schema.model_validate_json(raw2.strip()) if schema is not None else json.loads(raw2.strip())
             except Exception as exc2:
                 raise LLMError(f"Ollama JSON repair failed: {exc2}") from exc2
 

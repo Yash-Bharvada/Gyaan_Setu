@@ -1,0 +1,29 @@
+# Devpost Verification Evidence Table
+
+This document provides a line-by-line verification trace for every factual claim, metric, formula, and capability stated in [devpost_story.md](file:///d:/Gyaan_Setu/docs/devpost_story.md) and [devpost_extras.md](file:///d:/Gyaan_Setu/docs/devpost_extras.md).
+
+| Claim in Story / Extras | Evidence Source File or Command | Exact Value Found in Repo / Output | Status |
+| :--- | :--- | :--- | :--- |
+| Multimodal ingestion parses PDF, PPTX, video, images, text into traceable units linked to pages, slides, or timestamps | `backend/app/modules/ingestion/pdf.py`<br>`backend/app/modules/ingestion/pptx.py`<br>`backend/app/modules/ingestion/video.py`<br>`backend/app/modules/ingestion/ocr.py` | PyMuPDF `fitz` page extraction, `python-pptx` slides, OpenCV keyframes, `faster-whisper` timestamps | Verified |
+| Curriculum concepts structured into Directed Acyclic Graph (DAG) with topological sort and cycle detection | `backend/app/modules/knowledge/graph.py` | `nx.is_directed_acyclic_graph(self.graph)`, `nx.topological_sort(self.graph)` | Verified |
+| Source-grounded tutor uses hybrid retrieval (BM25 + dense embeddings) with relevance gate and citations | `backend/app/modules/tutor/retrieval.py`<br>`backend/app/modules/tutor/gate.py`<br>`backend/app/modules/tutor/answer.py` | `BM25Okapi` from `rank-bm25`, cosine similarity threshold refusal, `[Page X]`, `[Slide Y]`, `[MM:SS]` locators | Verified |
+| BKT engine default parameters: initial knowledge 0.30, transition 0.15, guess 0.20, slip 0.10 | `backend/app/modules/learner/bkt.py:15-18` | `p_init: float = 0.30`, `p_transit: float = 0.15`, `p_guess: float = 0.20`, `p_slip: float = 0.10` | Verified |
+| BKT probability update formulas for correct and incorrect responses | `backend/app/modules/learner/bkt.py:31-47` | Correct: `p_l * (1 - p_slip) / denom`<br>Incorrect: `p_l * p_slip / denom`<br>Next: `p_l_obs + (1 - p_l_obs) * p_transit` | Verified |
+| Memory stability growth formula and incorrect reset formula | `backend/app/modules/learner/bkt.py:50-65` | Correct: `stability * (1.0 + p_known * 1.5)`<br>Incorrect: `max(0.5, stability * 0.4)` | Verified |
+| Adaptive quizzing generates MCQs and short answers with cross-model verification and stem deduplication | `backend/app/modules/assessment/service.py:57-90`<br>`backend/app/modules/assessment/verifier.py` | `QuestionType.mcq`, `QuestionType.short`, `QuestionVerifier.verify_question`, `db.query(Question).filter(Question.stem == stem)` | Verified |
+| Flashcards use SuperMemo SM-2 spaced repetition with default ease factor 2.5 | `backend/app/modules/revision/flashcards.py:20-60` | `ease_factor: float = 2.5`, interval update formula based on review quality 0-5 | Verified |
+| Spoken 2-minute audio brief script generator | `backend/app/modules/revision/brief.py` | `AudioBriefGenerator.generate_brief` returning `full_spoken_script` | Verified |
+| Language detection identifies English, Devanagari Hindi, and Romanized Hinglish | `backend/app/modules/language/detect.py:27-42` | `detect_language(text)` returning `"hi"`, `"hi-Latn"`, or `"en"` | Verified |
+| Speech tutoring provides STT transcription and TTS audio synthesis | `backend/app/modules/audio/stt.py`<br>`backend/app/modules/audio/tts.py`<br>`backend/app/modules/audio/router.py` | `faster-whisper` STT, `edge-tts` TTS, `/api/v1/audio/voice-chat` | Verified |
+| Backend technology stack: Python 3.10+, FastAPI, SQLAlchemy, SQLite WAL | `backend/app/main.py`<br>`backend/requirements.txt:5,15`<br>`backend/app/core/config.py:9` | `fastapi==0.111.0`, `sqlalchemy==2.0.30`, `sqlite:///.../studycompanion.db` with WAL mode | Verified |
+| Local embedding model: paraphrase-multilingual-MiniLM-L12-v2 (384 dimensions) | `backend/app/core/config.py:82` | `EMBEDDING_MODEL: str = "paraphrase-multilingual-MiniLM-L12-v2"` | Verified |
+| Frontend stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS | `frontend/package.json:14-16,25` | `"next": "16.3.8"`, `"react": "19.2.8"`, `"tailwindcss": "^4"`, `"typescript": "^5"` | Verified |
+| Total registered FastAPI API endpoints: 45 | Live `GET /openapi.json` | `len(r['paths']) == 45` | Verified |
+| Pytest test suite execution: 44 passed, 1 failed, 3 warnings in 55.97s | Terminal command `python -m pytest -q` | `1 failed, 44 passed, 3 warnings in 55.97s` | Verified |
+| Local vector store test failure cause: parallel identical direction vectors with equal cosine distance | `tests/test_m0_foundation.py:487` traceback | `assert 'v2' == 'v1'` querying `[0.1]*384` against `[0.1]*384` and `[0.9]*384` in ChromaDB | Verified |
+| Automated RAG benchmark metrics: Faithfulness 0.92, Relevance 0.88, Precision 0.85, RAGAS 0.883 | Live `POST /api/v1/eval/rag`<br>`backend/app/models/__init__.py:EvalRun #1` | `faithfulness: 0.92, answer_relevance: 0.88, context_precision: 0.85, ragas_score: 0.883` | Verified |
+| Student simulator multi-day trajectory: 7 days, average learner, 8 topics, final average mastery 0.677 | Live `POST /api/v1/eval/simulate`<br>`backend/app/models/__init__.py:EvalRun #2` | `days_simulated: 7, persona: "average_learner", final_mastery_average: 0.677` | Verified |
+| Zero external API spend: usage ledger shows 0.0 cost incurred | Live `GET /api/v1/admin/usage`<br>`GET /api/v1/admin/llm-usage` | `/api/v1/admin/usage: {"ledger":{}}`<br>`/api/v1/admin/llm-usage: {"cost": 0.0}` | Verified |
+| Dedicated student misconception diagnostic reporting is stubbed in report.py | `backend/app/modules/assessment/report.py` | `# stub - implemented in later module` | Verified |
+| Fuzzy question deduplication is stubbed in dedupe.py | `backend/app/modules/assessment/dedupe.py` | `# stub - implemented in later module` | Verified |
+| GitHub remote repository URL: https://github.com/Yash-Bharvada/Gyaan_Setu.git | Terminal command `git remote -v` | `origin https://github.com/Yash-Bharvada/Gyaan_Setu.git (fetch)` | Verified |

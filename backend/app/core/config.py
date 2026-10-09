@@ -1,10 +1,12 @@
-"""Application settings loaded from environment / .env file."""
-from __future__ import annotations
-
+from pathlib import Path
 from typing import List, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_DATA_DIR = str(_BASE_DIR / "data")
+_DEFAULT_DB_URL = f"sqlite:///{(_BASE_DIR / 'data' / 'studycompanion.db').as_posix()}"
 
 
 class Settings(BaseSettings):
@@ -49,10 +51,16 @@ class Settings(BaseSettings):
     SARVAM_RATE_TTS_PER_10K_CHARS: float = 0.0
     SARVAM_RATE_TRANSLATE_PER_10K_CHARS: float = 0.0
 
+    # ── ElevenLabs (Free Tier) ───────────────────────────────────────────────
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_MODEL_ID: str = "eleven_multilingual_v2"
+    ELEVENLABS_VOICE_FEMALE: str = "EXAVITQu4vr4xnSDxMaL"  # Sarah (mature, confident educator)
+    ELEVENLABS_VOICE_MALE: str = "JBFqnCBsd6RMkjVDRZzb"    # George (warm storyteller)
+
     # ── Provider selection ───────────────────────────────────────────────────
     QA_STT_PROVIDER: Literal["sarvam", "faster-whisper"] = "faster-whisper"
     INGEST_STT_PROVIDER: Literal["faster-whisper"] = "faster-whisper"
-    TTS_PROVIDER: Literal["sarvam", "edge", "gtts"] = "edge"
+    TTS_PROVIDER: Literal["elevenlabs", "sarvam", "edge", "gtts"] = "elevenlabs"
     TRANSLATE_PROVIDER: Literal["sarvam", "llm"] = "llm"
 
     # ── LLM rate limits (token bucket, read from env for each provider) ──────
@@ -67,13 +75,13 @@ class Settings(BaseSettings):
     BUDGET_MODE: Literal["normal", "saver"] = "normal"
 
     # ── LLM response cache ───────────────────────────────────────────────────
-    LLM_CACHE_DIR: str = "data/llm_cache"
+    LLM_CACHE_DIR: str = str(_BASE_DIR / "data" / "llm_cache")
 
     # ── Database ─────────────────────────────────────────────────────────────
-    DB_URL: str = "sqlite:///./data/studycompanion.db"
+    DB_URL: str = _DEFAULT_DB_URL
 
     # ── Storage ──────────────────────────────────────────────────────────────
-    DATA_DIR: str = "data"
+    DATA_DIR: str = _DEFAULT_DATA_DIR
     MAX_UPLOAD_MB: int = 200
 
     # ── Embeddings ───────────────────────────────────────────────────────────

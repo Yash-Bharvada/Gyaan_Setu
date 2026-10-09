@@ -143,32 +143,37 @@ class GroqClient(LLMClient):
     def generate_json(
         self,
         prompt: str,
-        schema: Type[BaseModel],
+        schema: Type[BaseModel] | None = None,
         system: str | None = None,
         role: Literal["generator", "verifier"] = "generator",
         temperature: float = 0.2,
         max_tokens: int = 4096,
         repair_retry: int = 1,
         bypass_cache: bool = False,
-    ) -> BaseModel:
+    ) -> Any:
         model = self._model_for_role(role)
         key = f"generate_json_{role}"
         self._calls[key] = self._calls.get(key, 0) + 1
 
-        schema_str = json.dumps(schema.model_json_schema(), indent=2)
-        sys_msg = (system or "") + (
-            f"\n\nRespond ONLY with valid JSON matching this schema:\n{schema_str}"
-        )
+        if schema is not None:
+            schema_str = json.dumps(schema.model_json_schema(), indent=2)
+            sys_msg = (system or "") + (
+                f"\n\nRespond ONLY with valid JSON matching this schema:\n{schema_str}"
+            )
+        else:
+            sys_msg = (system or "") + "\n\nRespond ONLY with valid JSON. Do not include markdown or explanations outside the JSON."
 
         raw = self._raw_generate(prompt, sys_msg, model, temperature, max_tokens, bypass_cache)
 
-        def _parse(text: str) -> BaseModel:
+        def _parse(text: str) -> Any:
             # Strip markdown fences if present
             text = text.strip()
             if text.startswith("```"):
                 lines = text.split("\n")
                 text = "\n".join(lines[1:-1]) if len(lines) > 2 else text
-            return schema.model_validate_json(text)
+            if schema is not None:
+                return schema.model_validate_json(text)
+            return json.loads(text)
 
         try:
             return _parse(raw)

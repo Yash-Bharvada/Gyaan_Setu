@@ -112,7 +112,11 @@ class TutorService:
         past_msgs = db.query(ChatMessage).filter(ChatMessage.session_id == session.id).order_by(ChatMessage.created_at.asc()).limit(8).all()
         history_formatted = "\n".join([f"{m.role.capitalize()}: {m.content}" for m in past_msgs])
 
-        user_prompt = f"Student Conversation History:\n{history_formatted}\n\nStudent Query: {query}\n\nTutor Explanation:"
+        user_prompt = (
+            f"Student Conversation History:\n{history_formatted}\n\n"
+            f"Student Query: {query}\n\n"
+            "Tutor Explanation (provide a complete, deeply educational, and beautifully structured academic response with clear definitions, real-world examples, source citations, and reflection question):"
+        )
 
         # 5. Generate LLM response
         try:
@@ -120,6 +124,7 @@ class TutorService:
                 prompt=user_prompt,
                 system=system_prompt,
                 temperature=0.3,
+                max_tokens=3500,
             )
         except Exception as exc:
             logger.error("LLM tutor generation error: %s", exc)

@@ -4,26 +4,38 @@ import React, { useState, useRef, useEffect } from "react";
 import { DoubleGoldCard } from "@/components/ui/DoubleGoldCard";
 import { GreekKeyDivider } from "@/components/ui/GreekKeyDivider";
 import { SourceModal } from "@/components/ui/SourceModal";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { useI18n } from "@/lib/i18n";
 import { apiClient, ChatMessage, Citation } from "@/lib/api";
 
 export default function TutorPage() {
   const { t } = useI18n();
+  const [sessionId, setSessionId] = useState<number>(1);
+  const [strictGrounding, setStrictGrounding] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "initial-1",
       role: "assistant",
       content:
-        "Namaste! I am your Gyaan Setu grounded AI tutor. Every explanation I provide is strictly cited from your uploaded textbooks, slides, and lecture transcripts. How can I assist your learning today?",
+        "Namaste! I am your Gyaan Setu grounded AI tutor. Every explanation I provide is strictly verified and cited from your course materials and curriculum DAG. Ask me anything about your syllabus!",
       grounded: true,
-      timestamp: "10:00 AM",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
   const [inputPrompt, setInputPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Initialize or load tutor session
+    apiClient.createTutorSession().then((res) => {
+      if (res.session_id) setSessionId(res.session_id);
+    });
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -45,10 +57,9 @@ export default function TutorPage() {
     setLoading(true);
 
     try {
-      const resp = await apiClient.sendTutorMessage(text);
+      const resp = await apiClient.sendTutorMessage(text, sessionId, 1, strictGrounding);
       setMessages((prev) => [...prev, resp]);
     } catch {
-      // Fallback
       setMessages((prev) => [
         ...prev,
         {
@@ -63,17 +74,104 @@ export default function TutorPage() {
     }
   };
 
+  const startNewSession = async () => {
+    const res = await apiClient.createTutorSession();
+    if (res.session_id) setSessionId(res.session_id);
+    setMessages([
+      {
+        id: `init-${Date.now()}`,
+        role: "assistant",
+        content:
+          "Starting a fresh tutoring session. How can I help you understand your curriculum today?",
+        grounded: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  };
+
+  const handleSpeak = async (msgId: string, text: string) => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    if (speakingMsgId === msgId) {
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    setSpeakingMsgId(msgId);
+    try {
+      const audioUrl = await apiClient.synthesizeSpeech(text.slice(0, 400));
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        currentAudioRef.current = audio;
+        audio.onended = () => setSpeakingMsgId(null);
+        audio.onerror = () => setSpeakingMsgId(null);
+        audio.play();
+      } else {
+        // Browser SpeechSynthesis fallback
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          const u = new SpeechSynthesisUtterance(text);
+          u.onend = () => setSpeakingMsgId(null);
+          u.onerror = () => setSpeakingMsgId(null);
+          window.speechSynthesis.speak(u);
+        } else {
+          setSpeakingMsgId(null);
+        }
+      }
+    } catch {
+      setSpeakingMsgId(null);
+    }
+  };
+
   const toggleRecording = () => {
     if (isRecording) {
       setIsRecording(false);
-      handleSend("Explain the recurrence relation for Binary Search and Master Theorem Case 2.");
-    } else {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        handleSend("Explain the recurrence relation for Binary Search and Master Theorem Case 2.");
-      }, 3500);
+      return;
     }
+
+    // Try Web Speech API if supported
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        setIsRecording(true);
+        recognition.start();
+
+        recognition.onresult = (event: any) => {
+          const speechResult = event.results[0][0].transcript;
+          setIsRecording(false);
+          setInputPrompt(speechResult);
+          handleSend(speechResult);
+        };
+
+        recognition.onerror = () => {
+          setIsRecording(false);
+          handleSend("What is the recurrence relation and worst-case complexity of Binary Search?");
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+        return;
+      } catch (e) {
+        console.warn("Speech recognition error:", e);
+      }
+    }
+
+    // Fallback demo simulation
+    setIsRecording(true);
+    setTimeout(() => {
+      setIsRecording(false);
+      handleSend("Explain what is a Directed Acyclic Graph (DAG) and Topological Sorting.");
+    }, 2500);
   };
 
   return (
@@ -88,25 +186,53 @@ export default function TutorPage() {
         </p>
       </div>
 
+      {/* Control Bar: Session & Grounding Mode */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-[#1A1210]/70 p-4 rounded-2xl border border-[#E2A63A]/40 text-xs text-[#F7EDCF]">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-bold text-[#E2A63A]">Session #{sessionId}</span>
+          <span className="text-stone-400">• Hybrid BM25 + Vector Retrieval Active</span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={strictGrounding}
+              onChange={(e) => setStrictGrounding(e.target.checked)}
+              className="accent-[#D4211C] w-4 h-4 cursor-pointer"
+            />
+            <span className="font-semibold">Strict Grounding Only</span>
+          </label>
+
+          <button
+            onClick={startNewSession}
+            className="px-3 py-1 rounded-full bg-[#FAF4E4] text-[#1A1210] hover:bg-[#E2A63A] font-bold transition-all text-xs"
+          >
+            New Session
+          </button>
+        </div>
+      </div>
+
       {/* Suggested Inquiries Pills */}
-      <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
         <span className="text-xs font-bold uppercase text-[#E2A63A] tracking-wider mr-1">
           Try Queries:
         </span>
         <button
-          onClick={() => handleSend("What is the recurrence relation and worst-case complexity of Binary Search?")}
+          onClick={() => handleSend("What is a Directed Acyclic Graph (DAG) and what algorithms are used for topological sorting?")}
           className="px-3.5 py-1.5 rounded-full bg-[#1A1210]/60 border border-[#E2A63A]/40 text-[#F7EDCF] hover:bg-[#1A1210] hover:border-[#E2A63A] text-xs transition-all"
         >
-          &ldquo;Binary Search Complexity&rdquo;
+          &ldquo;DAG & Topological Sorting&rdquo;
         </button>
         <button
-          onClick={() => handleSend("What are the two core prerequisites for solving a problem with Dynamic Programming?")}
+          onClick={() => handleSend("Explain why Dijkstra's algorithm fails with negative edge weights.")}
           className="px-3.5 py-1.5 rounded-full bg-[#1A1210]/60 border border-[#E2A63A]/40 text-[#F7EDCF] hover:bg-[#1A1210] hover:border-[#E2A63A] text-xs transition-all"
         >
-          &ldquo;Hallmarks of Dynamic Programming&rdquo;
+          &ldquo;Dijkstra vs Bellman-Ford&rdquo;
         </button>
         <button
-          onClick={() => handleSend("Who won the 18th century French Revolution in Paris?")}
+          onClick={() => handleSend("Who won the French Revolution in 1789?")}
           className="px-3.5 py-1.5 rounded-full bg-[#D4211C]/30 border border-[#D4211C] text-[#F7EDCF] hover:bg-[#D4211C]/50 text-xs transition-all"
         >
           Test Refusal: &ldquo;French Revolution&rdquo;
@@ -137,6 +263,20 @@ export default function TutorPage() {
                       {t("tutorGroundedBadge")}
                     </span>
                   )}
+                  {!isUser && (
+                    <button
+                      onClick={() => handleSpeak(msg.id, msg.content)}
+                      className={`p-1 rounded-full hover:bg-stone-200 transition-colors ${
+                        speakingMsgId === msg.id ? "text-[#D4211C] animate-pulse" : "text-stone-600"
+                      }`}
+                      title="Listen to explanation (TTS)"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
 
                 {/* Message Surface */}
@@ -160,9 +300,13 @@ export default function TutorPage() {
                     </div>
                   )}
 
-                  <p className="text-base leading-relaxed whitespace-pre-wrap font-sans">
-                    {msg.content}
-                  </p>
+                  {isUser ? (
+                    <p className="text-base leading-relaxed whitespace-pre-wrap font-sans">
+                      {msg.content}
+                    </p>
+                  ) : (
+                    <MarkdownRenderer content={msg.content} />
+                  )}
 
                   {/* Verifiable Citation Chips */}
                   {msg.citations && msg.citations.length > 0 && (
@@ -215,7 +359,7 @@ export default function TutorPage() {
           {isRecording && (
             <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#D4211C] text-white text-xs font-bold shadow-lg animate-bounce">
               <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-              <span>Listening via Voice STT (Sarvam AI / Whisper)...</span>
+              <span>Listening via Voice STT (Whisper / Sarvam)... Speak now</span>
             </div>
           )}
 

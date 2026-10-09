@@ -101,7 +101,11 @@ def create_adaptive_quiz(
                 "stem": it.question.stem,
                 "type": it.question.type.value,
                 "options": json.loads(it.question.options) if it.question.options else None,
+                "answer_key": it.question.answer_key,
+                "explanation": it.question.explanation,
+                "distractor_rationales": json.loads(it.question.distractor_rationales) if it.question.distractor_rationales else {},
                 "topic_id": it.question.topic_id,
+                "topic_name": it.question.topic.name if it.question.topic else f"Topic #{it.question.topic_id}",
                 "difficulty": it.question.difficulty,
             }
             for it in quiz.items

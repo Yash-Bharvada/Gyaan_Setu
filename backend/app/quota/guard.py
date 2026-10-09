@@ -48,3 +48,8 @@ def get_freeocr_guard() -> BudgetGuard:
 def get_sarvam_guard() -> BudgetGuard:
     from app.core.config import settings
     return BudgetGuard("sarvam", "inr", settings.SARVAM_BUDGET_INR)
+
+
+def get_elevenlabs_guard() -> BudgetGuard:
+    # Free tier character limit: 10,000 characters per month hard cap
+    return BudgetGuard("elevenlabs", "characters", 10000.0)

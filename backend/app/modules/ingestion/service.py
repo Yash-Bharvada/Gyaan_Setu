@@ -23,7 +23,9 @@ from app.modules.ingestion.parsers.image import parse_image
 from app.modules.ingestion.parsers.pdf import parse_pdf
 from app.modules.ingestion.parsers.pptx import parse_pptx
 from app.modules.ingestion.parsers.video import parse_video_audio
+from app.modules.ingestion.parsers.youtube import parse_youtube_video
 from app.vectorstore.base import VectorStore
+
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +217,149 @@ class IngestionService:
             raise AppError(f"Ingestion processing failed: {exc}")
 
     @staticmethod
+    def process_youtube_or_video_url(
+        db: Session,
+        url: str,
+        title: Optional[str] = None,
+        llm_client: Optional[LLMClient] = None,
+        vector_store: Optional[VectorStore] = None,
+        auto_build_knowledge: bool = True,
+        job_id: Optional[int] = None,
+    ) -> Source:
+        """Parse and ingest a YouTube video or external video URL into timestamped lecture units."""
+        clean_url = url.strip()
+        url_hash = hashlib.sha256(clean_url.lower().encode("utf-8")).hexdigest()
+
+        # Check deduplication
+        existing = db.query(Source).filter(Source.file_hash == url_hash).first()
+        if existing and existing.status == "ready":
+            logger.info("Video URL already ingested: %s (source id %d)", clean_url, existing.id)
+            return existing
+
+        # Extract metadata and timestamped transcript units
+        stt_provider = getattr(settings, "INGEST_STT_PROVIDER", "faster-whisper")
+        metadata, raw_units = parse_youtube_video(clean_url, stt_provider=stt_provider)
+
+        source_title = title or metadata.get("title") or "Video Lecture"
+        duration_secs = metadata.get("duration_secs", 0.0)
+
+        source = existing or Source(
+            title=source_title,
+            kind=SourceKind.video,
+            file_path=clean_url,
+            file_hash=url_hash,
+            file_size=int(duration_secs * 1024) if duration_secs else 1024,
+            duration_secs=duration_secs,
+            status="processing",
+            job_id=job_id,
+        )
+        if not existing:
+            db.add(source)
+            db.commit()
+            db.refresh(source)
+        else:
+            source.status = "processing"
+            source.title = source_title
+            source.duration_secs = duration_secs
+            db.commit()
+
+        try:
+            # Delete old units if re-processing existing
+            if existing:
+                db.query(Unit).filter(Unit.source_id == source.id).delete()
+                db.commit()
+
+            # Persist timestamped units
+            db_units: List[Unit] = []
+            for u_data in raw_units:
+                unit = Unit(
+                    source_id=source.id,
+                    type=UnitType.transcript,
+                    text=u_data["text"],
+                    page=None,
+                    slide_no=None,
+                    ts_start=u_data.get("ts_start"),
+                    ts_end=u_data.get("ts_end"),
+                    lang=u_data.get("lang", "en"),
+                    token_count=u_data.get("token_count", len(u_data["text"].split())),
+                    ocr_provider_used=None,
+                )
+                db.add(unit)
+                db_units.append(unit)
+
+            db.commit()
+            for u in db_units:
+                db.refresh(u)
+
+            # Generate embeddings and upsert to vector store
+            if llm_client and vector_store:
+                texts = [u.text for u in db_units]
+                embeddings = llm_client.embed(texts)
+                vectors_to_upsert: List[Dict[str, Any]] = []
+
+                for u, emb in zip(db_units, embeddings):
+                    vector_id = f"unit_{u.id}"
+                    u.embedding_id = vector_id
+
+                    meta = {
+                        "unit_id": u.id,
+                        "source_id": source.id,
+                        "source_title": source.title,
+                        "type": "transcript",
+                        "ts_start": u.ts_start,
+                        "ts_end": u.ts_end,
+                        "video_url": clean_url,
+                        "text": u.text[:500],
+                    }
+                    vectors_to_upsert.append({
+                        "id": vector_id,
+                        "values": emb,
+                        "metadata": meta,
+                    })
+
+                    db.add(VectorRef(
+                        owner_id=u.id,
+                        kind="unit",
+                        vector_id=vector_id,
+                        namespace="units",
+                    ))
+
+                    raw_blob = struct.pack(f"{len(emb)}e", *emb)
+                    db.add(EmbeddingCache(
+                        owner_id=u.id,
+                        kind="unit",
+                        blob=raw_blob,
+                        dim=len(emb),
+                        model="local-embed",
+                    ))
+
+                vector_store.upsert(vectors_to_upsert, namespace="units")
+                db.commit()
+
+            source.status = "ready"
+            db.commit()
+            db.refresh(source)
+
+            # Automatically build or update Knowledge DAG if requested
+            if auto_build_knowledge and llm_client:
+                try:
+                    from app.modules.knowledge.service import KnowledgeService
+                    KnowledgeService.build_knowledge_base(db, llm_client, vector_store=vector_store)
+                except Exception as k_exc:
+                    logger.warning("Auto knowledge base update warning: %s", k_exc)
+
+            return source
+
+        except Exception as exc:
+            db.rollback()
+            source.status = "failed"
+            db.commit()
+            logger.error("Video ingestion failed for source %d: %s", source.id, exc)
+            raise AppError(f"Video ingestion processing failed: {exc}")
+
+    @staticmethod
     def get_source(db: Session, source_id: int) -> Source:
+
         source = db.get(Source, source_id)
         if not source:
             raise NotFoundError(f"Source {source_id} not found")

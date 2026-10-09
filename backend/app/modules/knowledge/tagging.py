@@ -55,6 +55,7 @@ class ConceptTagger:
             best_topic_id = None
             best_score = -1.0
 
+            tagged_topic_ids = set()
             for t_idx, topic in enumerate(topics):
                 t_emb = topic_embeddings[t_idx]
                 sim = cosine_sim(u_emb, t_emb)
@@ -65,7 +66,7 @@ class ConceptTagger:
                         UnitTopic.topic_id == topic.id,
                     ).first()
 
-                    if not existing:
+                    if not existing and topic.id not in tagged_topic_ids:
                         ut = UnitTopic(
                             unit_id=unit.id,
                             topic_id=topic.id,
@@ -73,6 +74,7 @@ class ConceptTagger:
                             method="embedding",
                         )
                         db.add(ut)
+                        tagged_topic_ids.add(topic.id)
                         tagged_count += 1
 
                 if sim > best_score:
@@ -80,7 +82,7 @@ class ConceptTagger:
                     best_topic_id = topic.id
 
             # Ensure every unit has at least its best matching topic
-            if best_topic_id is not None:
+            if best_topic_id is not None and best_topic_id not in tagged_topic_ids:
                 existing = db.query(UnitTopic).filter(
                     UnitTopic.unit_id == unit.id,
                     UnitTopic.topic_id == best_topic_id,
@@ -93,6 +95,7 @@ class ConceptTagger:
                         method="embedding",
                     )
                     db.add(ut)
+                    tagged_topic_ids.add(best_topic_id)
                     tagged_count += 1
 
         db.commit()
