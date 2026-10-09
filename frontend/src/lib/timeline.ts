@@ -747,6 +747,29 @@ export function buildGyaanSetuTimeline(
       // and clamps at 1.0 (final frame hold) for the remaining 40vh!
       const timelineProgress = Math.min(1, self.progress / activeFraction);
       tl.progress(timelineProgress);
+
+      // Hero is active in view while progress < 1.0; ensure heroPast is strictly false
+      if (typeof window !== "undefined") {
+        if (self.progress < 1.0) {
+          window.dispatchEvent(
+            new CustomEvent("gyaan-hero-past", { detail: { past: false } })
+          );
+        }
+        window.dispatchEvent(new Event("gyaan-scroll"));
+      }
+    },
+    onLeave: () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("gyaan-scroll"));
+      }
+    },
+    onEnterBack: () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("gyaan-hero-past", { detail: { past: false } })
+        );
+        window.dispatchEvent(new Event("gyaan-scroll"));
+      }
     },
   });
 

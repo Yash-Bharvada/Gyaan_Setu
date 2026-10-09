@@ -1,28 +1,79 @@
 @import "tailwindcss";
+@import "../tokens.css";
 
 :root {
-  --background: #DA231D;
-  --foreground: #ffffff;
-  --vermilion-red: #DA231D;
-  --gold-accent: #E5C158;
-  --font-brush: var(--font-kaushan), "Permanent Marker", cursive, sans-serif;
-  --font-serif: var(--font-cinzel), serif;
+  --background: #D4211C;
+  --foreground: #F7EDCF;
+  --color-vermilion: #D4211C;
+  --color-gold: #E2A63A;
+  --color-cream: #F7EDCF;
+  --color-ink: #1A1210;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-vermilion: var(--vermilion-red);
-  --color-gold: var(--gold-accent);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-brush: var(--font-brush);
-  --font-serif: var(--font-serif);
+  --color-vermilion: var(--color-vermilion);
+  --color-gold: var(--color-gold);
+  --color-cream: var(--color-cream);
+  --color-ink: var(--color-ink);
+  --font-display: var(--font-kaushan), 'Kaushan Script', cursive, serif;
+  --font-body: var(--font-mukta), 'Mukta', system-ui, sans-serif;
 }
 
 html {
-  background-color: var(--vermilion-red);
-  color: var(--foreground);
+  background-color: #D4211C;
+  color: #F7EDCF;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+body {
+  background-color: #D4211C;
+  background-image: url('/red_texture.jpg');
+  background-repeat: repeat;
+  background-size: 560px auto;
+  color: #1A1210;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-mukta), 'Mukta', sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Universally hide scrollbars on all elements while keeping scrolling 100% functional */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
+/* 3D Perspective Utility */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
 }
 
 /* Lenis smooth scrolling defaults */
@@ -36,20 +87,4 @@ html.lenis, html.lenis body {
 
 .lenis.lenis-smooth [data-lenis-prevent] {
   overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
-.lenis.lenis-smooth iframe {
-  pointer-events: none;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
 }
