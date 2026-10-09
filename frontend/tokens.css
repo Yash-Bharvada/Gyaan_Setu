@@ -1,0 +1,205 @@
+/* =========================================================================
+   GYAAN SETU DESIGN TOKENS
+   Specification: FRONTEND_PROMPT_GYAAN_SETU.md
+   Art direction: Match cover art exactly (Vermilion red, Gold, Cream, Ink)
+   ========================================================================= */
+
+@font-face {
+  font-family: 'Kaushan Script';
+  src: url('/fonts/KaushanScript-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mukta';
+  src: url('/fonts/Mukta-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mukta';
+  src: url('/fonts/Mukta-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mukta';
+  src: url('/fonts/Mukta-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* --- Primary Color Palette --- */
+  --color-vermilion: #D4211C;
+  --color-vermilion-dark: #A91814;
+  --color-vermilion-light: #E73934;
+
+  --color-gold: #E2A63A;
+  --color-gold-dark: #B97F1F;
+  --color-gold-light: #F7D488;
+  --color-gold-glow: rgba(226, 166, 58, 0.45);
+
+  --color-cream: #F7EDCF;
+  --color-cream-light: #FCF8EC;
+  --color-cream-surface: #FAF3DE;
+  --color-cream-muted: #E8D9AF;
+
+  --color-ink: #1A1210;
+  --color-ink-muted: #3B2E2A;
+  --color-ink-faint: #63524C;
+
+  --color-white: #FFFFFF;
+
+  /* --- Semantic Role Assignments --- */
+  --bg-page: var(--color-vermilion);
+  --bg-surface: var(--color-cream);
+  --bg-card: var(--color-cream-surface);
+  --text-main: var(--color-ink);
+  --text-on-red: var(--color-cream);
+  --text-gold: var(--color-gold);
+
+  /* --- Radii --- */
+  --radius-pill: 9999px;
+  --radius-card-sm: 20px;
+  --radius-card-md: 24px;
+  --radius-card-lg: 32px;
+
+  /* --- Typography --- */
+  --font-display: 'Kaushan Script', 'Yuji Boku', cursive, serif;
+  --font-body: 'Mukta', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+  --text-body-min: 17px;
+
+  /* --- Spacing & Frame --- */
+  --frame-inset: 18px;
+  --frame-border-width: 3px;
+  --corner-ornament-size: 230px;
+
+  /* --- Double Gold Outline Effect --- */
+  /* 3px gold border + 6px cream ring + 3px gold ring */
+  --double-gold-ring: 0 0 0 3px var(--color-gold), 0 0 0 9px var(--color-cream), 0 0 0 12px var(--color-gold);
+  --double-gold-ring-sm: 0 0 0 2px var(--color-gold), 0 0 0 6px var(--color-cream), 0 0 0 8px var(--color-gold);
+}
+
+/* Base Body Application */
+body {
+  background-color: var(--color-vermilion);
+  background-image: url('/red_texture.jpg');
+  background-repeat: repeat;
+  background-size: 560px auto;
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: var(--text-body-min);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Display Headings */
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* UI Surfaces & Double Gold Outline */
+.surface-cream-double-gold {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+  border-radius: var(--radius-card-lg);
+  box-shadow: var(--double-gold-ring), 0 20px 40px rgba(26, 18, 16, 0.35);
+}
+
+.surface-cream-double-gold-sm {
+  background-color: var(--color-cream);
+  color: var(--color-ink);
+  border-radius: var(--radius-card-md);
+  box-shadow: var(--double-gold-ring-sm), 0 12px 24px rgba(26, 18, 16, 0.25);
+}
+
+/* Buttons */
+.btn-primary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: var(--color-ink);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  border-radius: var(--radius-pill);
+  padding: 0.85rem 2rem;
+  min-height: 48px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.btn-primary-pill:hover {
+  transform: translateY(-2px);
+  background-color: #2D211D;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  border-color: var(--color-gold);
+}
+
+.btn-primary-pill:active {
+  transform: translateY(0);
+}
+
+.btn-secondary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: transparent;
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  border: 3px solid var(--color-gold);
+  border-radius: var(--radius-pill);
+  padding: 0.8rem 1.9rem;
+  min-height: 48px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-secondary-pill:hover {
+  transform: translateY(-2px);
+  background-color: rgba(226, 166, 58, 0.18);
+  box-shadow: 0 8px 20px rgba(226, 166, 58, 0.25);
+}
+
+.btn-secondary-pill:active {
+  transform: translateY(0);
+}
+
+/* Citation Chips */
+.chip-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--color-vermilion);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(247, 237, 207, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-citation:hover {
+  background-color: var(--color-vermilion-dark);
+  border-color: var(--color-gold);
+  transform: scale(1.04);
+}
