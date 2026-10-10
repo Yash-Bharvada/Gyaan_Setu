@@ -61,6 +61,7 @@ class AssessmentService:
                 llm=llm,
                 question_type=q_type,
                 difficulty=3,
+                count=count,
             )
 
             for q_data in raw_qs:
@@ -69,6 +70,8 @@ class AssessmentService:
 
                 # Check duplicate stem
                 stem = q_data.get("stem", "").strip()
+                if not stem:
+                    continue
                 existing = db.query(Question).filter(Question.stem == stem).first()
                 if existing:
                     continue
@@ -100,32 +103,104 @@ class AssessmentService:
         num_questions: int = 5,
         topic_ids: Optional[List[int]] = None,
     ) -> Assessment:
-        """Create an adaptive quiz prioritizing topics with low BKT mastery."""
+        """Create an adaptive quiz prioritizing topics with low BKT mastery, generating enough questions to satisfy requested count."""
         student = db.get(Student, student_id)
         if not student:
             raise NotFoundError(f"Student {student_id} not found")
 
-        # Select target questions
-        query = db.query(Question)
-        if topic_ids:
-            query = query.filter(Question.topic_id.in_(topic_ids))
+        # Query matching questions
+        def get_matching_questions():
+            q = db.query(Question)
+            if topic_ids:
+                q = q.filter(Question.topic_id.in_(topic_ids))
+            return q.all()
 
-        all_questions = query.all()
+        all_questions = get_matching_questions()
 
-        if not all_questions:
-            # Generate a few placeholder questions if none in bank
-            topics = db.query(Topic).all()
-            for t in topics[:2]:
-                from app.llm.mock import MockLLM
-                AssessmentService.generate_questions_for_topic(db, t.id, MockLLM())
-            all_questions = db.query(Question).all()
+        # If existing question count is below requested count, generate real questions
+        if len(all_questions) < num_questions:
+            from app.llm.groq import GroqClient
+            llm_inst = GroqClient()
 
-        # Score questions by student need (lower mastery = higher priority)
+            # Rank topics: if topic_ids given, use them; else sort topics by student's mastery gap
+            mastery_map = {m.topic_id: m.p_known for m in student.mastery}
+            all_topics = db.query(Topic).all()
+
+            if topic_ids:
+                target_topics = [t for t in all_topics if t.id in topic_ids]
+            else:
+                target_topics = sorted(all_topics, key=lambda t: mastery_map.get(t.id, 0.0))
+
+            needed = num_questions - len(all_questions)
+            questions_per_topic = max(2, min(5, (needed + len(target_topics) - 1) // max(1, len(target_topics))))
+
+            for t in target_topics:
+                if len(all_questions) >= num_questions:
+                    break
+                try:
+                    AssessmentService.generate_questions_for_topic(
+                        db=db,
+                        topic_id=t.id,
+                        llm=llm_inst,
+                        count=questions_per_topic,
+                    )
+                    all_questions = get_matching_questions()
+                except Exception as exc:
+                    logger.warning("Question generation failed for topic %s: %s", t.id, exc)
+
+            # If still short (e.g. single topic with high question count requested), generate across different difficulties
+            if len(all_questions) < num_questions and target_topics:
+                for diff in [1, 5]:
+                    if len(all_questions) >= num_questions:
+                        break
+                    for t in target_topics:
+                        if len(all_questions) >= num_questions:
+                            break
+                        units = [ut.unit for ut in t.unit_topics if ut.unit]
+                        if not units:
+                            units = db.query(Unit).limit(3).all()
+                        for q_type in [QuestionType.mcq, QuestionType.short]:
+                            try:
+                                raw_qs = QuestionGenerator.generate_questions(
+                                    units=units,
+                                    topic=t,
+                                    llm=llm_inst,
+                                    question_type=q_type,
+                                    difficulty=diff,
+                                    count=2,
+                                )
+                                for q_data in raw_qs:
+                                    stem = q_data.get("stem", "").strip()
+                                    if not stem or db.query(Question).filter(Question.stem == stem).first():
+                                        continue
+                                    q_obj = Question(
+                                        type=QuestionType(q_data.get("type", q_type.value)),
+                                        stem=stem,
+                                        options=json.dumps(q_data.get("options")) if q_data.get("options") else None,
+                                        answer_key=str(q_data.get("answer_key", "")),
+                                        explanation=q_data.get("explanation", ""),
+                                        distractor_rationales=json.dumps(q_data.get("distractor_rationales")) if q_data.get("distractor_rationales") else None,
+                                        topic_id=t.id,
+                                        difficulty=diff,
+                                        verified=True,
+                                        verification_strength="strong",
+                                    )
+                                    db.add(q_obj)
+                                db.commit()
+                            except Exception as exc:
+                                logger.warning("Multi-difficulty question gen error: %s", exc)
+                        all_questions = get_matching_questions()
+
+            # If STILL short because a single narrow topic has no more questions, expand to curriculum questions
+            if len(all_questions) < num_questions and topic_ids:
+                extra_questions = db.query(Question).filter(~Question.id.in_([q.id for q in all_questions])).all()
+                all_questions.extend(extra_questions[:num_questions - len(all_questions)])
+
+        # Score questions by student need (lower mastery = higher priority in ZPD)
         mastery_map = {m.topic_id: m.p_known for m in student.mastery}
 
         def question_priority(q: Question) -> float:
             p_k = mastery_map.get(q.topic_id, 0.3)
-            # We want items with p_k close to 0.5 or lower (ZPD - Zone of Proximal Development)
             return 1.0 - abs(p_k - 0.5)
 
         sorted_questions = sorted(all_questions, key=question_priority, reverse=True)

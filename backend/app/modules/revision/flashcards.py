@@ -19,7 +19,7 @@ from app.modules.tutor.citations import format_unit_citation
 logger = logging.getLogger(__name__)
 
 FLASHCARD_GEN_PROMPT = """You are an expert in spaced repetition flashcards.
-Given the following source material for topic "{topic_name}", create 2 high-yield flashcards.
+Given the following source material for topic "{topic_name}", create {count} high-yield flashcards.
 Each flashcard must have a concise front question/prompt and a clear, factually accurate back answer.
 
 Source Content:
@@ -83,6 +83,7 @@ class FlashcardService:
         student_id: int,
         topic_id: int,
         llm: LLMClient,
+        count: int = 3,
     ) -> List[Flashcard]:
         """Generate and store flashcards for a topic."""
         topic = db.get(Topic, topic_id)
@@ -91,11 +92,12 @@ class FlashcardService:
             return []
 
         units = [ut.unit for ut in topic.unit_topics if ut.unit]
-        context_str = "\n\n".join([u.text[:300] for u in units[:4]])
+        context_str = "\n\n".join([u.text[:350] for u in units[:4]])
 
         prompt = FLASHCARD_GEN_PROMPT.format(
             topic_name=topic.name,
             context=context_str if context_str else topic.summary or "",
+            count=count,
         )
 
         try:
@@ -105,10 +107,11 @@ class FlashcardService:
             cards_data = []
 
         if not cards_data:
+            summary = topic.summary or f"Core mechanism and principles of {topic.name}."
             cards_data = [
                 {
-                    "front": f"What is the definition and core principle of {topic.name}?",
-                    "back": f"{topic.summary or 'Primary academic principle covered in curriculum.'}",
+                    "front": f"What is the core principle and purpose of {topic.name}?",
+                    "back": summary,
                 }
             ]
 
@@ -116,11 +119,23 @@ class FlashcardService:
 
         created = []
         for c in cards_data:
+            front_text = c.get("front", "").strip()
+            back_text = c.get("back", "").strip()
+            if not front_text or not back_text:
+                continue
+
+            existing = db.query(Flashcard).filter(
+                Flashcard.student_id == student_id,
+                Flashcard.front == front_text,
+            ).first()
+            if existing:
+                continue
+
             fc = Flashcard(
                 student_id=student_id,
                 topic_id=topic_id,
-                front=c["front"],
-                back=c["back"],
+                front=front_text,
+                back=back_text,
                 citation=json.dumps(citation) if citation else None,
                 ease_factor=2.5,
                 interval_days=1.0,

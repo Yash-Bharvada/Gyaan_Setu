@@ -3,56 +3,18 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environments
-venv/
-.venv/
-ENV/
-env/
-env.bak/
-venv.bak/
-
-# Environment Variables & Secrets
-.env
-.env.local
-.env.*.local
-*.pem
-*.key
-
-# Pytest & Coverage
 .pytest_cache/
 .coverage
-.coverage.*
 htmlcov/
-.tox/
-.nox/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
 
-# IDE & Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
+# Environments
+.venv/
+venv/
+env/
+ENV/
 
 # Media files & Audio Cache
 *.mp3
@@ -65,34 +27,70 @@ Thumbs.db
 # Antigravity & Agent configs
 .agents/
 
-# Application Data & Local Caches
-data/
-backend/data/uploads/*
-!backend/data/uploads/.gitkeep
-backend/data/local_vectors/*
-!backend/data/local_vectors/.gitkeep
-backend/data/audio/*
-!backend/data/audio/.gitkeep
-backend/data/audio_cache/*
-!backend/data/audio_cache/.gitkeep
-backend/data/eval/*
-!backend/data/eval/.gitkeep
-backend/data/llm_cache/*
-!backend/data/llm_cache/.gitkeep
-backend/data/*.txt
-backend/data/*.pdf
+# Backend runtime data & storage
 backend/data/*.db*
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite3
+backend/data/test_reply.txt
+backend/data/test.db
+backend/data/eval/*
+!backend/data/eval/.gitkeep
+backend/data/llm_cache/*
+!backend/data/llm_cache/.gitkeep
+backend/data/local_vectors/*
+!backend/data/local_vectors/.gitkeep
+backend/data/audio/*
+!backend/data/audio/.gitkeep
+backend/data/audio_cache/*
+!backend/data/audio_cache/.gitkeep
+backend/data/uploads/*.pdf
+backend/data/uploads/*.pptx
+backend/data/uploads/*.docx
+.agents/
 
-# Node / Frontend (when added)
+# Dependencies
 node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+/coverage
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+*.swp
+*.swo
+
+# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.next/
-dist/
-out/
+.pnpm-debug.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

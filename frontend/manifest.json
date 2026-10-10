@@ -1,0 +1,99 @@
+{
+  "canvas": {
+    "w": 2752,
+    "h": 1536
+  },
+  "z_order_bottom_to_top": [
+    "background_empty",
+    "brush_stand",
+    "girl_chair",
+    "dog",
+    "inkstone",
+    "parchment",
+    "ink_on_parchment",
+    "floating_ink",
+    "title_gyaan_setu"
+  ],
+  "layers": {
+    "brush_stand": {
+      "x": 1745,
+      "y": 630,
+      "w": 199,
+      "h": 351,
+      "left_pct": 63.408,
+      "top_pct": 41.016,
+      "width_pct": 7.231,
+      "height_pct": 22.852
+    },
+    "girl_chair": {
+      "x": 1062,
+      "y": 457,
+      "w": 827,
+      "h": 773,
+      "left_pct": 38.59,
+      "top_pct": 29.753,
+      "width_pct": 30.051,
+      "height_pct": 50.326
+    },
+    "inkstone": {
+      "x": 907,
+      "y": 1077,
+      "w": 121,
+      "h": 113,
+      "left_pct": 32.958,
+      "top_pct": 70.117,
+      "width_pct": 4.397,
+      "height_pct": 7.357
+    },
+    "dog": {
+      "x": 579,
+      "y": 758,
+      "w": 567,
+      "h": 284,
+      "left_pct": 21.039,
+      "top_pct": 49.349,
+      "width_pct": 20.603,
+      "height_pct": 18.49
+    },
+    "parchment": {
+      "x": 915,
+      "y": 923,
+      "w": 1670,
+      "h": 613,
+      "left_pct": 33.249,
+      "top_pct": 60.091,
+      "width_pct": 60.683,
+      "height_pct": 39.909
+    },
+    "ink_on_parchment": {
+      "x": 1234,
+      "y": 1046,
+      "w": 1110,
+      "h": 438,
+      "left_pct": 44.84,
+      "top_pct": 68.099,
+      "width_pct": 40.334,
+      "height_pct": 28.516
+    },
+    "floating_ink": {
+      "x": 1782,
+      "y": 819,
+      "w": 640,
+      "h": 672,
+      "left_pct": 64.753,
+      "top_pct": 53.32,
+      "width_pct": 23.256,
+      "height_pct": 43.75
+    },
+    "title_gyaan_setu": {
+      "x": 585,
+      "y": 92,
+      "w": 1604,
+      "h": 365,
+      "left_pct": 21.257,
+      "top_pct": 5.99,
+      "width_pct": 58.285,
+      "height_pct": 23.763
+    }
+  }
+}

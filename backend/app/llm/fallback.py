@@ -97,14 +97,14 @@ class FallbackChain(LLMClient):
     def generate_json(
         self,
         prompt: str,
-        schema: Type[BaseModel],
+        schema: Type[BaseModel] | None = None,
         system: str | None = None,
         role: Literal["generator", "verifier"] = "generator",
         temperature: float = 0.2,
         max_tokens: int = 4096,
         repair_retry: int = 1,
         bypass_cache: bool = False,
-    ) -> BaseModel:
+    ) -> Any:
         return self._call_with_fallback(
             "generate_json", prompt, schema, system=system, role=role,
             temperature=temperature, max_tokens=max_tokens,
