@@ -49,10 +49,16 @@ class Settings(BaseSettings):
     SARVAM_RATE_TTS_PER_10K_CHARS: float = 0.0
     SARVAM_RATE_TRANSLATE_PER_10K_CHARS: float = 0.0
 
+    # ── ElevenLabs (Free Tier TTS) ──────────────────────────────────────────
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_MODEL_ID: str = "eleven_multilingual_v2"
+    ELEVENLABS_VOICE_FEMALE: str = "EXAVITQu4vr4xnSDxMaL"
+    ELEVENLABS_VOICE_MALE: str = "JBFqnCBsd6RMkjVDRZzb"
+
     # ── Provider selection ───────────────────────────────────────────────────
     QA_STT_PROVIDER: Literal["sarvam", "faster-whisper"] = "faster-whisper"
     INGEST_STT_PROVIDER: Literal["faster-whisper"] = "faster-whisper"
-    TTS_PROVIDER: Literal["sarvam", "edge", "gtts"] = "edge"
+    TTS_PROVIDER: Literal["elevenlabs", "sarvam", "edge", "gtts"] = "edge"
     TRANSLATE_PROVIDER: Literal["sarvam", "llm"] = "llm"
 
     # ── LLM rate limits (token bucket, read from env for each provider) ──────
