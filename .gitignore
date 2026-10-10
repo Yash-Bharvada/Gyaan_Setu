@@ -54,18 +54,37 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Media files & Audio Cache
+*.mp3
+*.wav
+*.mp4
+*.m4a
+*.webm
+*.ogg
+
+# Antigravity & Agent configs
+.agents/
+
 # Application Data & Local Caches
-data/uploads/*
-!data/uploads/.gitkeep
-data/local_vectors/*
-!data/local_vectors/.gitkeep
-data/audio/*
-!data/audio/.gitkeep
-data/eval/*
-!data/eval/.gitkeep
-data/llm_cache/*
-!data/llm_cache/.gitkeep
+data/
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+backend/data/local_vectors/*
+!backend/data/local_vectors/.gitkeep
+backend/data/audio/*
+!backend/data/audio/.gitkeep
+backend/data/audio_cache/*
+!backend/data/audio_cache/.gitkeep
+backend/data/eval/*
+!backend/data/eval/.gitkeep
+backend/data/llm_cache/*
+!backend/data/llm_cache/.gitkeep
+backend/data/*.txt
+backend/data/*.pdf
+backend/data/*.db*
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 
