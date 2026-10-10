@@ -127,36 +127,47 @@ def parse_youtube_video(
 
     # 1. Attempt YouTube Transcript API (Instant, exact timestamps, zero download)
     if video_id:
+        def _extract_item(it) -> Tuple[str, float, float]:
+            if isinstance(it, dict):
+                return str(it.get("text") or "").strip(), float(it.get("start", 0.0) or 0.0), float(it.get("duration", 0.0) or 0.0)
+            return str(getattr(it, "text", "") or "").strip(), float(getattr(it, "start", 0.0) or 0.0), float(getattr(it, "duration", 0.0) or 0.0)
+
         try:
             from youtube_transcript_api import YouTubeTranscriptApi
-            api = YouTubeTranscriptApi()
+            # Try new instance method
             try:
+                api = YouTubeTranscriptApi()
                 transcripts = api.fetch(video_id)
                 for item in list(transcripts):
-                    start_s = float(getattr(item, "start", 0.0))
-                    dur_s = float(getattr(item, "duration", 0.0) or 0.0)
-                    raw_snippets.append({
-                        "text": getattr(item, "text", ""),
-                        "start": start_s,
-                        "duration": dur_s,
-                        "end": start_s + dur_s,
-                    })
+                    txt, start_s, dur_s = _extract_item(item)
+                    if txt:
+                        raw_snippets.append({"text": txt, "start": start_s, "duration": dur_s, "end": start_s + dur_s})
             except Exception as e:
-                logger.info("Direct YouTube fetch attempt: %s. Trying list transcripts.", e)
-                t_list = api.list(video_id)
-                for t in t_list:
-                    transcripts = t.fetch()
-                    for item in list(transcripts):
-                        start_s = float(getattr(item, "start", 0.0))
-                        dur_s = float(getattr(item, "duration", 0.0) or 0.0)
-                        raw_snippets.append({
-                            "text": getattr(item, "text", ""),
-                            "start": start_s,
-                            "duration": dur_s,
-                            "end": start_s + dur_s,
-                        })
-                    if raw_snippets:
-                        break
+                logger.info("Direct YouTube fetch notice: %s. Trying legacy/list methods.", e)
+                # Try class method get_transcript or list_transcripts
+                if hasattr(YouTubeTranscriptApi, "get_transcript"):
+                    try:
+                        transcripts = YouTubeTranscriptApi.get_transcript(video_id)
+                        for item in transcripts:
+                            txt, start_s, dur_s = _extract_item(item)
+                            if txt:
+                                raw_snippets.append({"text": txt, "start": start_s, "duration": dur_s, "end": start_s + dur_s})
+                    except Exception as leg_e:
+                        logger.info("get_transcript failed: %s", leg_e)
+
+                if not raw_snippets and hasattr(YouTubeTranscriptApi, "list_transcripts"):
+                    try:
+                        t_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                        for t in t_list:
+                            transcripts = t.fetch()
+                            for item in list(transcripts):
+                                txt, start_s, dur_s = _extract_item(item)
+                                if txt:
+                                    raw_snippets.append({"text": txt, "start": start_s, "duration": dur_s, "end": start_s + dur_s})
+                            if raw_snippets:
+                                break
+                    except Exception as lt_e:
+                        logger.info("list_transcripts failed: %s", lt_e)
         except Exception as exc:
             logger.warning("YouTube transcript API not available for %s: %s", video_id, exc)
 

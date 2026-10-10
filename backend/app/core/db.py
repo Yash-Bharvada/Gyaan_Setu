@@ -46,8 +46,26 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Create all tables (idempotent)."""
+    """Create all tables (idempotent) and ensure default student exists."""
     # Import all models so Base picks them up
     import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    from app.models import Student
+    db = SessionLocal()
+    try:
+        student = db.query(Student).filter(Student.id == 1).first()
+        if not student:
+            default_student = Student(
+                id=1,
+                name="Alex Chen",
+                lang="en",
+                daily_minutes=30,
+            )
+            db.add(default_student)
+            db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
